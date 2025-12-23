@@ -2,8 +2,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 
-from app.apps.auth.models import User
-from app.core.security import Security
+from src.app.apps.auth.models import User
+from src.app.core.security import Security
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 

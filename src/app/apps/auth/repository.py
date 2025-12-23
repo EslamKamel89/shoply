@@ -3,8 +3,8 @@ from typing import Optional
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.apps.auth.models import RefreshToken, User
-from app.core.security import Security
+from src.app.apps.auth.models import RefreshToken, User
+from src.app.core.security import Security
 
 
 class RefreshTokenRepository:

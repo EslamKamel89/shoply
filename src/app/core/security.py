@@ -15,7 +15,7 @@ class Security:
         return pwd_context.hash(password)
 
     @classmethod
-    def verify_hash(cls, plain_password: str, hashed_password: str) -> bool:
+    def verify_password(cls, plain_password: str, hashed_password: str) -> bool:
         return pwd_context.verify(plain_password, hashed_password)
 
     @classmethod
