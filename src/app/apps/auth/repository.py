@@ -46,7 +46,9 @@ class UserRepository:
         self.session = session
 
     async def create(self, *, email: str, password: str, role: str = "user") -> User:
-        user = User(email=email, password=Security.hash_password(password), role=role)
+        user = User(
+            email=email, password_hash=Security.hash_password(password), role=role
+        )
         self.session.add(user)
         await self.session.flush()
         await self.session.refresh(user)

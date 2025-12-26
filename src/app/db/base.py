@@ -22,4 +22,5 @@ class TimestampMixin:
         DateTime(timezone=True),
         onupdate=func.now(),
         nullable=False,
+        server_default=func.now(),
     )

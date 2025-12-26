@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -33,12 +34,16 @@ class Security:
 
     @classmethod
     def create_refresh_token(cls, subject: str) -> str:
-        payload: dict[str, Any] = {"sub": subject}
         expire = datetime.now(timezone.utc) + timedelta(
             days=settings.REFRESH_EXPIRE_DAYS
         )
-        payload["exp"] = expire
-        payload["type"] = "refresh"
+        payload: dict[str, Any] = {
+            "sub": subject,
+            "exp": expire,
+            "type": "refresh",
+            "jti": str(uuid.uuid4()),
+            "iat": datetime.now(timezone.utc),
+        }
         return jwt.encode(
             claims=payload, key=settings.JWT_SECRET, algorithm=settings.JWT_ALG
         )

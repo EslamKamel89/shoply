@@ -4,15 +4,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.app.apps.auth.models import RefreshToken
 from src.app.apps.auth.repository import RefreshTokenRepository, UserRepository
 from src.app.apps.auth.schemas import TokenResponse, UserCreate, UserLogin, UserRead
-from src.app.core.deps import CurrentUser, get_current_user
+from src.app.core.deps import CurrentUser, get_current_user, get_db_session
 from src.app.core.security import Security
-from src.app.db.session import get_session
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-async def register(payload: UserCreate, session: AsyncSession = Depends(get_session)):
+async def register(
+    payload: UserCreate, session: AsyncSession = Depends(get_db_session)
+):
     repo = UserRepository(session)
     existing = await repo.get_by_email(payload.email)
     if existing:
@@ -24,7 +25,7 @@ async def register(payload: UserCreate, session: AsyncSession = Depends(get_sess
 
 
 @router.post("/token", response_model=TokenResponse)
-async def login(payload: UserLogin, session: AsyncSession = Depends(get_session)):
+async def login(payload: UserLogin, session: AsyncSession = Depends(get_db_session)):
     user_repo = UserRepository(session)
     user = await user_repo.get_by_email(payload.email)
     if not user or not Security.verify_password(payload.password, user.password_hash):
@@ -41,7 +42,7 @@ async def login(payload: UserLogin, session: AsyncSession = Depends(get_session)
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(
     refresh_token: str = Body(..., embed=True),
-    session: AsyncSession = Depends(get_session),
+    session: AsyncSession = Depends(get_db_session),
 ):
     try:
         payload = Security.decode_token(refresh_token)
@@ -79,7 +80,7 @@ async def refresh(
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
     refresh_token: str = Body(..., embed=True),
-    session: AsyncSession = Depends(get_session),
+    session: AsyncSession = Depends(get_db_session),
 ):
     rt_repo = RefreshTokenRepository(session)
     record = await rt_repo.get_by_token(refresh_token)
@@ -90,7 +91,7 @@ async def logout(
 
 @router.get("/me", response_model=UserRead)
 async def me(
-    session: AsyncSession = Depends(get_session),
+    session: AsyncSession = Depends(get_db_session),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     repo = UserRepository(session)

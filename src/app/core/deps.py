@@ -1,6 +1,9 @@
+from typing import AsyncGenerator
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.apps.auth.models import User
 from src.app.core.security import Security
@@ -11,6 +14,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 class CurrentUser(BaseModel):
     user_id: int
     role: str
+
+
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    raise RuntimeError("Database not initialized")
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> CurrentUser:
