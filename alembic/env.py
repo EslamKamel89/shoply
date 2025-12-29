@@ -8,6 +8,8 @@ from src.app.settings import settings
 
 try:
     import src.app.apps.auth.models
+    import src.app.apps.orders.models
+    import src.app.apps.products.models
 except Exception as e:
     raise e
 
