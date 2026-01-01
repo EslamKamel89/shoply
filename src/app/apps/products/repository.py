@@ -1,11 +1,11 @@
 from decimal import Decimal
 from typing import Optional, Sequence
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.app.apps.products.models import Category, Product
+from src.app.apps.products.models import Category, Product, ProductCategory
 
 
 class ProductRepository:
@@ -45,7 +45,13 @@ class ProductRepository:
     async def sync_categories(
         self, *, product: Product, categories: Sequence[Category]
     ):
-        self.session.add(product)
-        product.categories.clear()
-        product.categories.extend(categories)
+        self.session.add_all([product, *categories])
+        await self.session.flush()
+        await self.session.execute(
+            delete(ProductCategory).where(ProductCategory.product_id == product.id)
+        )
+        for category in categories:
+            self.session.add(
+                ProductCategory(product_id=product.id, category_id=category.id)
+            )
         await self.session.flush()

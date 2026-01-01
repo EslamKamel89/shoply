@@ -21,11 +21,13 @@ class OrderRepository:
     async def add_item(
         self, *, order: Order, product_id: int, quantity: int, unit_price: Decimal
     ) -> OrderItem:
-        self.session.add(order)
         item = OrderItem(
-            product_id=product_id, quantity=quantity, unit_price=unit_price
+            order_id=order.id,
+            product_id=product_id,
+            quantity=quantity,
+            unit_price=unit_price,
         )
-        order.items.append(item)
+        self.session.add_all([order, item])
         await self.session.flush()
         await self.session.refresh(item)
         return item
