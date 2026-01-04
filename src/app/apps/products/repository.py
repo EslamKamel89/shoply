@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Optional, Sequence
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -55,3 +55,40 @@ class ProductRepository:
                 ProductCategory(product_id=product.id, category_id=category.id)
             )
         await self.session.flush()
+
+    async def list_with_filters(
+        self,
+        *,
+        page: int,
+        limit: int,
+        q: str | None = None,
+        category_id: int | None = None,
+        min_price: Decimal | None = None,
+        max_price: Decimal | None = None,
+        sort: str | None = None,
+    ) -> tuple[int, Sequence[Product]]:
+        stmt = select(Product).options(selectinload(Product.categories))
+        if q:
+            q = q.strip()
+            if q:
+                stmt = stmt.where(Product.name.ilike(f"%{q}%"))
+        if min_price is not None:
+            stmt = stmt.where(Product.price >= min_price)
+        if max_price is not None:
+            stmt = stmt.where(Product.price <= max_price)
+        if category_id is not None:
+            # stmt = stmt.join(Product.categories).where(Category.id == category_id)
+            stmt = stmt.where(Product.categories.any(Category.id == category_id))
+        if sort == "price":
+            stmt = stmt.order_by(Product.price.asc(), Product.id.asc())
+        elif sort == "-price":
+            stmt = stmt.order_by(Product.price.desc(), Product.id.asc())
+        else:
+            stmt = stmt.order_by(Product.created_at.desc())
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total: int = (await self.session.execute(count_stmt)).scalar_one()
+        offset = (page - 1) * limit
+        stmt = stmt.offset(offset).limit(limit)
+        res = await self.session.execute(stmt)
+        items = res.scalars().all()
+        return (total, items)

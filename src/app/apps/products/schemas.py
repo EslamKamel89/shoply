@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -32,3 +33,13 @@ class ProductResponse(BaseModel):
     categories: list[CategoryResponse]
     created_at: datetime
     updated_at: datetime
+
+
+T = TypeVar("T")
+
+
+class Page(BaseModel, Generic[T]):
+    total: int
+    page: int
+    limit: int
+    items: list[T]
