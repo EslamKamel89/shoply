@@ -1,7 +1,8 @@
 from decimal import Decimal
 from typing import Optional, Sequence
 
-from sqlalchemy import delete, func, select
+from fastapi import HTTPException, status
+from sqlalchemy import delete, func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -20,6 +21,20 @@ class ProductRepository:
         )
         res = await self.session.execute(stmt)
         return res.scalar_one_or_none()
+
+    async def get_by_id_or_fail(self, product_id: int) -> Product:
+        stmt = (
+            select(Product)
+            .where(Product.id == product_id)
+            .options(selectinload(Product.categories))
+        )
+        res = await self.session.execute(stmt)
+        product = res.scalar_one_or_none()
+        if product is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Product not found"
+            )
+        return product
 
     async def get_by_name(self, name: str) -> Optional[Product]:
         stmt = (
@@ -92,3 +107,60 @@ class ProductRepository:
         res = await self.session.execute(stmt)
         items = res.scalars().all()
         return (total, items)
+
+    async def create_with_categories(
+        self,
+        *,
+        name: str,
+        price: Decimal,
+        category_ids: list[int] | None = None,
+    ) -> Product:
+        product = Product(name=name, price=price)
+        self.session.add(product)
+        await self.session.flush()
+        await self.session.refresh(product)
+        if category_ids is not None:
+            categories_stmt = select(Category).where(Category.id.in_(category_ids))
+            categories_res = await self.session.execute(categories_stmt)
+            categories = categories_res.scalars().all()
+            if len(categories) != len(category_ids):
+                raise HTTPException(
+                    detail="at least one id in categories ids is not valid",
+                    status_code=status.HTTP_409_CONFLICT,
+                )
+        else:
+            categories = []
+        await self.sync_categories(product=product, categories=categories)
+        await self.session.refresh(product)
+        return await self.get_by_id_or_fail(product.id)
+
+    async def update_with_categories(
+        self,
+        *,
+        product: Product,
+        name: str | None = None,
+        price: Decimal | None = None,
+        category_ids: list[int] | None = None,
+    ) -> Product:
+        assert inspect(product).persistent
+        if name is not None:
+            product.name = name
+        if price is not None:
+            product.price = price
+        if category_ids is not None:
+            categories_stmt = select(Category).where(Category.id.in_(category_ids))
+            categories_res = await self.session.execute(categories_stmt)
+            categories = categories_res.scalars().all()
+            if len(categories) != len(category_ids):
+                raise HTTPException(
+                    detail="at least one id in categories ids is not valid",
+                    status_code=status.HTTP_409_CONFLICT,
+                )
+            await self.sync_categories(product=product, categories=categories)
+        await self.session.flush()
+        await self.session.refresh(product)
+        return await self.get_by_id_or_fail(product.id)
+
+    async def delete(self, *, product: Product) -> None:
+        assert inspect(product).persistent
+        await self.session.delete(product)

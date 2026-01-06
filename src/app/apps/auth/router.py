@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.apps.auth.models import RefreshToken
@@ -25,9 +26,12 @@ async def register(
 
 
 @router.post("/token", response_model=TokenResponse)
-async def login(payload: UserLogin, session: AsyncSession = Depends(get_db_session)):
+async def login(
+    payload: OAuth2PasswordRequestForm = Depends(),
+    session: AsyncSession = Depends(get_db_session),
+):
     user_repo = UserRepository(session)
-    user = await user_repo.get_by_email(payload.email)
+    user = await user_repo.get_by_email(payload.username)
     if not user or not Security.verify_password(payload.password, user.password_hash):
         raise HTTPException(
             detail="Invalid credentials", status_code=status.HTTP_401_UNAUTHORIZED
