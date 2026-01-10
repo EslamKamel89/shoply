@@ -78,6 +78,19 @@ async def update_product(
         return ProductResponse.model_validate(product)
 
 
+@router.get("/{product_id}", response_model=ProductResponse)
+async def product_details(
+    product_id: int, session: AsyncSession = Depends(get_db_session)
+):
+    repo = ProductRepository(session)
+    product = await repo.get_details_by_id(product_id)
+    if product is None:
+        raise HTTPException(
+            detail="Product not found", status_code=status.HTTP_404_NOT_FOUND
+        )
+    return ProductResponse.model_validate(product)
+
+
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_product(
     product_id: int,

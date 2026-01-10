@@ -4,7 +4,7 @@ from typing import Optional, Sequence
 from fastapi import HTTPException, status
 from sqlalchemy import delete, func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
 from src.app.apps.products.models import Category, Product, ProductCategory
 
@@ -21,6 +21,15 @@ class ProductRepository:
         )
         res = await self.session.execute(stmt)
         return res.scalar_one_or_none()
+
+    async def get_details_by_id(self, product_id: int) -> Optional[Product]:
+        stmt = (
+            select(Product)
+            .where(Product.id == product_id)
+            .options(joinedload(Product.categories))
+        )
+        res = await self.session.execute(stmt)
+        return res.unique().scalar_one_or_none()
 
     async def get_by_id_or_fail(self, product_id: int) -> Product:
         stmt = (
