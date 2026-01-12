@@ -1,8 +1,9 @@
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.app.apps.products.helpers import log_after_response
 from src.app.apps.products.repository import ProductRepository
 from src.app.apps.products.schemas import (
     Page,
@@ -13,6 +14,12 @@ from src.app.apps.products.schemas import (
 from src.app.core.deps import CurrentUser, admin_required, get_db_session
 
 router = APIRouter(prefix="/products", tags=["products"])
+
+
+@router.get("/demo/background")
+async def demo_background_task(background_tasks: BackgroundTasks):
+    background_tasks.add_task(log_after_response, "Hello from the background task")
+    return {"status": "response send"}
 
 
 @router.get("/", response_model=Page[ProductResponse])
