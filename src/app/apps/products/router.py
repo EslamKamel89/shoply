@@ -1,7 +1,17 @@
 import asyncio
+import tempfile
 from decimal import Decimal
+from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.apps.products.helpers import log_after_response
@@ -12,7 +22,10 @@ from src.app.apps.products.schemas import (
     ProductResponse,
     ProductUpdate,
 )
-from src.app.apps.products.services import demo_background_service
+from src.app.apps.products.services import (
+    demo_background_service,
+    import_products_from_csv,
+)
 from src.app.core.deps import CurrentUser, admin_required, get_db_session
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -32,6 +45,27 @@ async def demo_background_task_sync(background_tasks: BackgroundTasks):
 async def demo_background_task_async(background_tasks: BackgroundTasks):
     background_tasks.add_task(run_demo_service, "Hello from the service layer")
     return {"status": "response send"}
+
+
+def run_csv_import_background(file_path: Path) -> None:
+    asyncio.run(import_products_from_csv(file_path))
+
+
+@router.post("/import/csv", status_code=status.HTTP_202_ACCEPTED)
+async def import_products_csv(
+    file: UploadFile,
+    background_tasks: BackgroundTasks,
+    _: CurrentUser = Depends(admin_required),
+):
+    if file.content_type != "text/csv":
+        raise HTTPException(status_code=400, detail="CSV file required")
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp:
+        contents = await file.read()
+        tmp.write(contents)
+        tmp_path = Path(tmp.name)
+    background_tasks.add_task(run_csv_import_background, tmp_path)
+    await file.close()
+    return {"status": "import started"}
 
 
 @router.get("/", response_model=Page[ProductResponse])
