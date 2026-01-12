@@ -1,3 +1,4 @@
+import asyncio
 from decimal import Decimal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
@@ -11,14 +12,25 @@ from src.app.apps.products.schemas import (
     ProductResponse,
     ProductUpdate,
 )
+from src.app.apps.products.services import demo_background_service
 from src.app.core.deps import CurrentUser, admin_required, get_db_session
 
 router = APIRouter(prefix="/products", tags=["products"])
 
 
-@router.get("/demo/background")
-async def demo_background_task(background_tasks: BackgroundTasks):
+def run_demo_service(message: str) -> None:
+    asyncio.run(demo_background_service(message))
+
+
+@router.get("/demo/background/sync")
+async def demo_background_task_sync(background_tasks: BackgroundTasks):
     background_tasks.add_task(log_after_response, "Hello from the background task")
+    return {"status": "response send"}
+
+
+@router.get("/demo/background/async")
+async def demo_background_task_async(background_tasks: BackgroundTasks):
+    background_tasks.add_task(run_demo_service, "Hello from the service layer")
     return {"status": "response send"}
 
 
