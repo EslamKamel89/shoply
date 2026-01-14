@@ -27,6 +27,7 @@ from src.app.apps.products.services import (
     import_products_from_csv,
 )
 from src.app.core.deps import CurrentUser, admin_required, get_db_session
+from src.app.workers.products_tasks import import_products_csv_tasks
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -63,7 +64,8 @@ async def import_products_csv(
         contents = await file.read()
         tmp.write(contents)
         tmp_path = Path(tmp.name)
-    background_tasks.add_task(run_csv_import_background, tmp_path)
+    # background_tasks.add_task(run_csv_import_background, tmp_path)
+    import_products_csv_tasks.delay(str(tmp_path))
     await file.close()
     return {"status": "import started"}
 

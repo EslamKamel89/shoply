@@ -1,6 +1,9 @@
 import os
 
+from dotenv import load_dotenv
 from pydantic import BaseModel
+
+load_dotenv()
 
 
 class Settings(BaseModel):
@@ -13,6 +16,7 @@ class Settings(BaseModel):
     DB_NAME: str = os.getenv("DB_NAME", "shoply_db")
     JWT_SECRET: str = os.getenv("JWT_SECRET", "")
     JWT_ALG: str = os.getenv("JWT_ALG", "HS256")
+    REDIS_URL: str = os.getenv("REDIS_URL", "")
     ACCESS_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_EXPIRE_MINUTES", "15"))
     REFRESH_EXPIRE_DAYS: int = int(os.getenv("REFRESH_EXPIRE_DAYS", "30"))
 
